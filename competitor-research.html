@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>競合リサーチツール | amznplan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#f2f4f6; --surface:#fff; --surface2:#f0f2f5; --border:#dde1e7;
+  --ink:#1a1d23; --ink2:#4a5568; --ink3:#8a96a8; --ink4:#c0c8d4;
+  --accent:#1e3a5f; --accent-b:#2b6cb0; --accent-light:#ebf4ff;
+  --r:12px; --rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(26,29,35,.75);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+.modal{background:var(--surface);border-radius:16px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+.modal-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:var(--ink);margin-bottom:4px;}
+.modal-logo span{color:var(--accent-b);}
+.modal-desc{font-size:13px;color:var(--ink3);margin-bottom:24px;line-height:1.8;}
+.modal-label{font-size:11px;font-weight:700;color:var(--ink2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:7px;}
+.modal-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--rs);color:var(--ink);font-family:'DM Mono',monospace;font-size:13px;padding:11px 14px;outline:none;transition:border-color .2s;}
+.modal-input:focus{border-color:var(--accent-b);box-shadow:0 0 0 3px rgba(43,108,176,.1);}
+.modal-hint{font-size:11px;color:var(--ink4);margin-top:7px;line-height:1.7;}
+.modal-hint a{color:var(--accent-b);text-decoration:none;}
+.modal-save{display:flex;align-items:center;gap:8px;margin-top:14px;}
+.modal-save input{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
+.modal-save label{font-size:12px;color:var(--ink3);cursor:pointer;}
+.modal-btn{width:100%;margin-top:20px;padding:13px;background:var(--accent);color:white;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:filter .2s;letter-spacing:.04em;}
+.modal-btn:hover{filter:brightness(1.15);}
+
+/* HEADER */
+header{height:54px;background:var(--ink);display:flex;align-items:center;padding:0 28px;gap:14px;position:sticky;top:0;z-index:100;}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:#fff;}
+.logo span{color:var(--accent-b);}
+.hbadge{background:rgba(255,255,255,.1);border-radius:6px;padding:3px 10px;font-size:11px;color:rgba(255,255,255,.5);font-family:'DM Mono',monospace;letter-spacing:.08em;}
+.hkey-btn{margin-left:auto;padding:5px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.5);font-size:11px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .2s;}
+.hkey-btn:hover{background:rgba(255,255,255,.15);color:white;}
+.back-btn{padding:5px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:5px;}
+.back-btn:hover{background:rgba(255,255,255,.15);color:white;}
+
+/* SEARCH AREA */
+.search-wrap{max-width:800px;margin:48px auto 0;padding:0 28px;}
+.search-headline{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--ink);margin-bottom:8px;line-height:1.3;}
+.search-desc{font-size:13px;color:var(--ink3);margin-bottom:28px;line-height:1.7;}
+
+.search-box{display:flex;gap:10px;margin-bottom:16px;}
+.search-input{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);color:var(--ink);font-family:'Noto Sans JP',sans-serif;font-size:15px;padding:14px 18px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.search-input:focus{border-color:var(--accent-b);box-shadow:0 0 0 3px rgba(43,108,176,.1);}
+.search-btn{padding:14px 28px;background:var(--accent);color:white;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:filter .2s,transform .1s;white-space:nowrap;letter-spacing:.04em;}
+.search-btn:hover{filter:brightness(1.15);}
+.search-btn:active{transform:scale(.98);}
+.search-btn:disabled{opacity:.4;cursor:not-allowed;filter:none;}
+
+.search-examples{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:40px;}
+.example-chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--ink2);cursor:pointer;transition:all .15s;}
+.example-chip:hover{border-color:var(--accent-b);color:var(--accent-b);}
+
+/* LOADING */
+.loading-area{display:none;text-align:center;padding:48px 0;}
+.loading-area.show{display:block;}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent-b);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.loading-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);letter-spacing:.08em;}
+
+/* RESULTS */
+.results-area{display:none;max-width:800px;margin:0 auto;padding:0 28px 60px;}
+.results-area.show{display:block;}
+
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--ink);}
+.results-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;}
+.results-kw{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent-b);background:var(--accent-light);padding:4px 12px;border-radius:6px;}
+
+/* TREND CARD */
+.trend-card{background:var(--ink);border-radius:var(--r);padding:24px 28px;margin-bottom:28px;position:relative;overflow:hidden;}
+.trend-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 85% 15%,rgba(43,108,176,.3) 0%,transparent 55%);}
+.trend-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:12px;}
+.trend-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:white;margin-bottom:10px;line-height:1.3;}
+.trend-desc{font-size:13px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:20px;}
+.trend-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.trend-tag{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;font-size:11px;color:rgba(255,255,255,.7);font-family:'DM Mono',monospace;}
+
+/* COPY PATTERNS */
+.copy-patterns-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.copy-pattern-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative;overflow:hidden;}
+.copy-pattern-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent-b));}
+.cp-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;margin-bottom:8px;}
+.cp-example{font-size:13px;font-weight:700;color:var(--ink);font-family:'Syne',sans-serif;margin-bottom:6px;line-height:1.3;}
+.cp-note{font-size:11px;color:var(--ink3);line-height:1.5;}
+
+/* COMPETITOR CARDS */
+.comp-section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.comp-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.comp-cards{display:flex;flex-direction:column;gap:12px;margin-bottom:28px;}
+.comp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;transition:border-color .2s,box-shadow .2s;cursor:pointer;position:relative;}
+.comp-card:hover{border-color:var(--accent-b);box-shadow:0 4px 16px rgba(43,108,176,.1);}
+.comp-card.selected{border-color:var(--accent-b);background:var(--accent-light);}
+.comp-card-check{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--accent-b);color:white;font-size:12px;display:none;align-items:center;justify-content:center;}
+.comp-card.selected .comp-card-check{display:flex;}
+.comp-rank{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);letter-spacing:.08em;margin-bottom:6px;}
+.comp-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;line-height:1.3;padding-right:32px;}
+.comp-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.comp-meta-tag{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 9px;font-size:10px;color:var(--ink2);font-family:'DM Mono',monospace;}
+.comp-meta-tag.price{background:var(--accent-light);color:var(--accent-b);border-color:var(--accent-b);}
+.comp-feature{font-size:12px;color:var(--ink2);line-height:1.6;}
+.comp-copy-style{margin-top:10px;background:var(--surface2);border-radius:6px;padding:9px 12px;font-size:11px;color:var(--ink2);line-height:1.6;border-left:2px solid var(--accent-b);}
+.comp-copy-style b{color:var(--accent);}
+
+/* THUMBNAIL ANALYSIS */
+.thumb-analysis{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:28px;}
+.thumb-patterns{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
+.thumb-pattern{background:var(--surface2);border-radius:var(--rs);padding:12px 14px;}
+.tp-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;}
+.tp-val{font-size:12px;color:var(--ink);line-height:1.5;font-weight:500;}
+
+/* EXPORT BUTTON */
+.export-wrap{position:sticky;bottom:24px;display:flex;justify-content:center;}
+.export-to-planner{padding:14px 32px;background:var(--accent-b);color:white;border:none;border-radius:var(--r);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:filter .2s,transform .1s;box-shadow:0 8px 24px rgba(43,108,176,.4);display:flex;align-items:center;gap:10px;letter-spacing:.04em;}
+.export-to-planner:hover{filter:brightness(1.1);}
+.export-to-planner:active{transform:scale(.98);}
+.export-to-planner:disabled{opacity:.4;cursor:not-allowed;}
+.selected-count{background:rgba(255,255,255,.25);border-radius:20px;padding:2px 10px;font-size:12px;}
+
+/* INSIGHTS */
+.insights-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:28px;}
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative;overflow:hidden;}
+.insight-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent-b));}
+.insight-k{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;margin-bottom:6px;}
+.insight-v{font-size:12px;font-weight:500;color:var(--ink);line-height:1.55;}
+
+@media(max-width:600px){.copy-patterns-grid{grid-template-columns:1fr}.thumb-patterns{grid-template-columns:1fr}.insights-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="modal-bg" id="apiModal">
+  <div class="modal">
+    <div class="modal-logo">amzn<span>plan</span></div>
+    <div class="modal-desc">Google AI StudioのAPIキーを入力してください。</div>
+    <div class="modal-label">Google AI Studio APIキー</div>
+    <input class="modal-input" id="apiKeyInput" type="password" placeholder="AIzaSy...">
+    <div class="modal-hint">取得先: <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></div>
+    <div class="modal-save">
+      <input type="checkbox" id="saveKey" checked>
+      <label for="saveKey">このブラウザに保存する</label>
+    </div>
+    <button class="modal-btn" id="modalStartBtn">はじめる →</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">amzn<span>plan</span></div>
+  <div class="hbadge">競合リサーチ</div>
+  <a class="back-btn" href="index.html">← 構成プランナーへ</a>
+  <button class="hkey-btn" id="changeKeyBtn">🔑 APIキー変更</button>
+</header>
+
+<div style="max-width:800px;margin:0 auto;padding:0 28px;">
+  <div class="search-wrap" style="padding:0;margin-top:48px;">
+    <div class="search-headline">競合リサーチ</div>
+    <div class="search-desc">Amazonのカテゴリキーワードを入力すると、上位競合商品を自動リサーチ。<br>コピースタイル・サムネイル傾向・差別化機会を分析して構成プランナーに読み込めます。</div>
+
+    <div class="search-box">
+      <input class="search-input" id="searchInput" type="text" placeholder="例：ビタミンD サプリ、花粉 スプレー 衣類...">
+      <button class="search-btn" id="searchBtn">🔍 リサーチ開始</button>
+    </div>
+
+    <div class="search-examples">
+      <span style="font-size:11px;color:var(--ink3);margin-right:4px;">例：</span>
+      <div class="example-chip" onclick="setKeyword('ビタミンD サプリ')">ビタミンD サプリ</div>
+      <div class="example-chip" onclick="setKeyword('花粉 スプレー 衣類')">花粉 スプレー 衣類</div>
+      <div class="example-chip" onclick="setKeyword('プロテイン ホエイ')">プロテイン ホエイ</div>
+      <div class="example-chip" onclick="setKeyword('マグネシウム サプリ')">マグネシウム サプリ</div>
+      <div class="example-chip" onclick="setKeyword('除菌スプレー ペット')">除菌スプレー ペット</div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-area" id="loadingArea">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg" id="loadingMsg">カテゴリを分析中...</div>
+  <div class="loading-sub" id="loadingSub">Researching competitors</div>
+</div>
+
+<div class="results-area" id="resultsArea">
+
+  <div class="results-header">
+    <div class="results-title" id="resultsTitle">リサーチ結果</div>
+    <div class="results-kw" id="resultsKw"></div>
+  </div>
+
+  <!-- カテゴリトレンド -->
+  <div id="trendSection"></div>
+
+  <!-- サムネイル傾向 -->
+  <div id="thumbSection"></div>
+
+  <!-- コピーパターン -->
+  <div id="copyPatternSection"></div>
+
+  <!-- 差別化インサイト -->
+  <div id="insightSection"></div>
+
+  <!-- 競合一覧 -->
+  <div class="comp-section-title">上位競合商品 <span style="font-size:11px;color:var(--ink3);font-family:'DM Mono',monospace;font-weight:400;">クリックで選択 → プランナーに読み込む</span></div>
+  <div class="comp-cards" id="compCards"></div>
+
+  <div class="export-wrap">
+    <button class="export-to-planner" id="exportBtn" disabled>
+      選択した競合をプランナーに読み込む
+      <span class="selected-count" id="selectedCount">0件選択</span>
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+// API Key
+var savedKey = localStorage.getItem('amznplan_key');
+if (savedKey) { window._apiKey = savedKey; document.getElementById('apiModal').style.display = 'none'; }
+
+document.getElementById('modalStartBtn').addEventListener('click', function() {
+  var k = document.getElementById('apiKeyInput').value.trim();
+  if (!k) return;
+  window._apiKey = k;
+  if (document.getElementById('saveKey').checked) localStorage.setItem('amznplan_key', k);
+  document.getElementById('apiModal').style.display = 'none';
+});
+document.getElementById('apiKeyInput').addEventListener('keydown', function(e) { if (e.key==='Enter') document.getElementById('modalStartBtn').click(); });
+document.getElementById('changeKeyBtn').addEventListener('click', function() {
+  document.getElementById('apiKeyInput').value = window._apiKey || '';
+  document.getElementById('apiModal').style.display = 'flex';
+});
+
+window.setKeyword = function(kw) {
+  document.getElementById('searchInput').value = kw;
+  document.getElementById('searchBtn').click();
+};
+
+// Loading messages
+var MSGS = [
+  ['🔍','カテゴリを分析中...','Category Analysis'],
+  ['📦','上位商品をリサーチ中...','Researching top products'],
+  ['📊','コピースタイルを分析中...','Analyzing copy patterns'],
+  ['🖼️','サムネイル傾向を抽出中...','Extracting visual trends'],
+  ['💡','差別化機会を特定中...','Finding opportunities'],
+];
+var loadTimer = null;
+function startLoad() {
+  document.getElementById('loadingArea').classList.add('show');
+  document.getElementById('resultsArea').classList.remove('show');
+  var i = 0;
+  function tick() {
+    document.getElementById('loadingMsg').textContent = MSGS[i][1];
+    document.getElementById('loadingSub').textContent  = MSGS[i][2];
+    i = (i+1) % MSGS.length;
+  }
+  tick(); loadTimer = setInterval(tick, 2000);
+}
+function stopLoad() {
+  if (loadTimer) { clearInterval(loadTimer); loadTimer = null; }
+  document.getElementById('loadingArea').classList.remove('show');
+}
+
+// Gemini API
+async function callGemini(prompt) {
+  var key = window._apiKey;
+  if (!key) throw new Error('APIキーが設定されていません');
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(key);
+  var res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      tools: [{ googleSearch: {} }],
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.5 }
+    })
+  });
+  if (!res.ok) { var e = await res.json(); throw new Error((e.error && e.error.message) || 'HTTP ' + res.status); }
+  var data = await res.json();
+  if (!data.candidates || !data.candidates[0]) throw new Error('レスポンスが空です');
+  // Collect all text parts (search results may span multiple parts)
+  var raw = '';
+  var parts = data.candidates[0].content.parts || [];
+  for (var p = 0; p < parts.length; p++) { if (parts[p].text) raw += parts[p].text; }
+
+  // Strip markdown fences
+  raw = raw.replace(/```json/g,'').replace(/```/g,'').trim();
+
+  // Find the outermost JSON object
+  var start = raw.indexOf('{');
+  if (start === -1) throw new Error('JSONが見つかりません');
+  var depth = 0, end = -1;
+  for (var i = start; i < raw.length; i++) {
+    if (raw[i] === '{') depth++;
+    else if (raw[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end === -1) throw new Error('JSONが不完全です（途中で切れています）');
+  var jsonStr = raw.slice(start, end + 1);
+  return JSON.parse(jsonStr);
+}
+
+// Search
+document.getElementById('searchBtn').addEventListener('click', async function() {
+  var kw = document.getElementById('searchInput').value.trim();
+  if (!kw) { alert('キーワードを入力してください'); return; }
+  if (!window._apiKey) { document.getElementById('apiModal').style.display = 'flex'; return; }
+
+  document.getElementById('searchBtn').disabled = true;
+  startLoad();
+
+  try {
+    var prompt = 'Amazon日本でキーワード「' + kw + '」を検索したときの上位商品をGoogle検索で調べて、以下のJSON形式で返してください。\n\n'
+      + '{"keyword":"' + kw + '",'
+      + '"category_trend":{"title":"このカテゴリのトレンド一言まとめ","description":"トレンドの詳細説明100字以内","keywords":["頻出キーワード1","頻出キーワード2","頻出キーワード3","頻出キーワード4","頻出キーワード5"]},'
+      + '"thumbnail_trends":{"bg_style":"よく使われる背景スタイル","color_scheme":"主要カラー傾向","copy_position":"コピーの配置傾向","key_visual":"よく使われるビジュアル要素","font_style":"フォントの傾向"},'
+      + '"copy_patterns":['
+      + '{"type":"最も多いコピーパターン","example":"具体的なコピー例","note":"特徴の説明"},'
+      + '{"type":"2番目に多いパターン","example":"具体的なコピー例","note":"特徴の説明"},'
+      + '{"type":"差別化できるパターン","example":"具体的なコピー例","note":"特徴の説明"}'
+      + '],'
+      + '"insights":{'
+      + '"whitespace":"まだ訴求されていない差別化余地","dominant_claim":"最も多い訴求軸","price_range":"価格帯の傾向","review_insight":"レビューから見える顧客インサイト"'
+      + '},'
+      + '"competitors":['
+      + '{"rank":1,"product_name":"商品名","brand":"ブランド名","price":"価格","rating":"評価","review_count":"レビュー数","main_claim":"主要訴求ポイント","ingredients":["成分1","成分2"],"quantity":"内容量","copy_style":"コピースタイルの特徴","thumbnail_style":"サムネイルスタイルの特徴","weakness":"この商品の弱点"},'
+      + '{"rank":2,"product_name":"...","brand":"...","price":"...","rating":"...","review_count":"...","main_claim":"...","ingredients":[],"quantity":"...","copy_style":"...","thumbnail_style":"...","weakness":"..."},'
+      + '{"rank":3,"product_name":"...","brand":"...","price":"...","rating":"...","review_count":"...","main_claim":"...","ingredients":[],"quantity":"...","copy_style":"...","thumbnail_style":"...","weakness":"..."},'
+      + '{"rank":4,"product_name":"...","brand":"...","price":"...","rating":"...","review_count":"...","main_claim":"...","ingredients":[],"quantity":"...","copy_style":"...","thumbnail_style":"...","weakness":"..."},'
+      + '{"rank":5,"product_name":"...","brand":"...","price":"...","rating":"...","review_count":"...","main_claim":"...","ingredients":[],"quantity":"...","copy_style":"...","thumbnail_style":"...","weakness":"..."}'
+      + ']}';
+
+    var result = await callGemini(prompt);
+    renderResults(result, kw);
+    // Save to localStorage for planner to read
+    localStorage.setItem('amznplan_research', JSON.stringify(result));
+
+  } catch(e) {
+    console.error(e);
+    alert('エラー: ' + e.message);
+  } finally {
+    stopLoad();
+    document.getElementById('searchBtn').disabled = false;
+  }
+});
+
+var selectedComps = [];
+
+function renderResults(r, kw) {
+  selectedComps = [];
+  updateExportBtn();
+
+  document.getElementById('resultsTitle').textContent = '「' + kw + '」リサーチ結果';
+  document.getElementById('resultsKw').textContent = kw;
+
+  // Trend
+  var tr = r.category_trend || {};
+  document.getElementById('trendSection').innerHTML = '<div class="trend-card">'
+    + '<div class="trend-label">CATEGORY TREND</div>'
+    + '<div class="trend-title">' + (tr.title||'') + '</div>'
+    + '<div class="trend-desc">' + (tr.description||'') + '</div>'
+    + '<div class="trend-tags">' + (tr.keywords||[]).map(function(k){ return '<div class="trend-tag"># ' + k + '</div>'; }).join('') + '</div>'
+    + '</div>';
+
+  // Thumbnail trends
+  var tt = r.thumbnail_trends || {};
+  document.getElementById('thumbSection').innerHTML = '<div class="comp-section-title" style="margin-bottom:14px;">サムネイル傾向分析</div>'
+    + '<div class="thumb-analysis">'
+    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:12px;">このカテゴリでよく使われているサムネイルのパターンです</div>'
+    + '<div class="thumb-patterns">'
+    + '<div class="thumb-pattern"><div class="tp-label">背景スタイル</div><div class="tp-val">' + (tt.bg_style||'―') + '</div></div>'
+    + '<div class="thumb-pattern"><div class="tp-label">カラー傾向</div><div class="tp-val">' + (tt.color_scheme||'―') + '</div></div>'
+    + '<div class="thumb-pattern"><div class="tp-label">コピー配置</div><div class="tp-val">' + (tt.copy_position||'―') + '</div></div>'
+    + '<div class="thumb-pattern"><div class="tp-label">ビジュアル要素</div><div class="tp-val">' + (tt.key_visual||'―') + '</div></div>'
+    + '<div class="thumb-pattern"><div class="tp-label">フォント傾向</div><div class="tp-val">' + (tt.font_style||'―') + '</div></div>'
+    + '</div></div>';
+
+  // Copy patterns
+  var cp = r.copy_patterns || [];
+  document.getElementById('copyPatternSection').innerHTML = '<div class="comp-section-title" style="margin-bottom:14px;">コピーパターン分析</div>'
+    + '<div class="copy-patterns-grid">'
+    + cp.map(function(p){ return '<div class="copy-pattern-card"><div class="cp-label">' + (p.type||'') + '</div><div class="cp-example">' + (p.example||'') + '</div><div class="cp-note">' + (p.note||'') + '</div></div>'; }).join('')
+    + '</div>';
+
+  // Insights
+  var ins = r.insights || {};
+  document.getElementById('insightSection').innerHTML = '<div class="comp-section-title" style="margin-bottom:14px;">差別化インサイト</div>'
+    + '<div class="insights-grid">'
+    + '<div class="insight-card"><div class="insight-k">差別化の余地</div><div class="insight-v">' + (ins.whitespace||'―') + '</div></div>'
+    + '<div class="insight-card"><div class="insight-k">支配的な訴求軸</div><div class="insight-v">' + (ins.dominant_claim||'―') + '</div></div>'
+    + '<div class="insight-card"><div class="insight-k">価格帯傾向</div><div class="insight-v">' + (ins.price_range||'―') + '</div></div>'
+    + '<div class="insight-card"><div class="insight-k">顧客インサイト</div><div class="insight-v">' + (ins.review_insight||'―') + '</div></div>'
+    + '</div>';
+
+  // Competitors
+  var comps = r.competitors || [];
+  document.getElementById('compCards').innerHTML = comps.map(function(c, i) {
+    return '<div class="comp-card" onclick="toggleComp(this,' + i + ')" data-idx="' + i + '">'
+      + '<div class="comp-card-check">✓</div>'
+      + '<div class="comp-rank">RANK ' + (c.rank||i+1) + '</div>'
+      + '<div class="comp-name">' + (c.product_name||'') + '</div>'
+      + '<div class="comp-meta">'
+      + (c.brand ? '<span class="comp-meta-tag">' + c.brand + '</span>' : '')
+      + (c.price ? '<span class="comp-meta-tag price">' + c.price + '</span>' : '')
+      + (c.rating ? '<span class="comp-meta-tag">' + c.rating + '★ ' + (c.review_count||'') + '</span>' : '')
+      + (c.quantity ? '<span class="comp-meta-tag">' + c.quantity + '</span>' : '')
+      + '</div>'
+      + '<div class="comp-feature">' + (c.main_claim||'') + '</div>'
+      + (c.copy_style ? '<div class="comp-copy-style"><b>📝 コピースタイル:</b> ' + c.copy_style + '</div>' : '')
+      + (c.thumbnail_style ? '<div class="comp-copy-style" style="border-color:var(--accent-b);margin-top:5px"><b>🖼️ サムネイル:</b> ' + c.thumbnail_style + '</div>' : '')
+      + (c.weakness ? '<div class="comp-copy-style" style="border-color:#e53e3e;margin-top:5px"><b>⚠️ 弱点:</b> ' + c.weakness + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  window._researchResult = r;
+  document.getElementById('resultsArea').classList.add('show');
+  document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+}
+
+window.toggleComp = function(el, idx) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) {
+    selectedComps.push(idx);
+  } else {
+    selectedComps = selectedComps.filter(function(i){ return i !== idx; });
+  }
+  updateExportBtn();
+};
+
+function updateExportBtn() {
+  var btn = document.getElementById('exportBtn');
+  var count = document.getElementById('selectedCount');
+  btn.disabled = selectedComps.length === 0;
+  count.textContent = selectedComps.length + '件選択';
+}
+
+// Export selected competitors to planner
+document.getElementById('exportBtn').addEventListener('click', function() {
+  if (!window._researchResult || selectedComps.length === 0) return;
+  var comps = window._researchResult.competitors || [];
+  var selected = selectedComps.map(function(i){ return comps[i]; });
+
+  // Build text summary for each selected competitor
+  var compSummaries = selected.map(function(c, i) {
+    return '競合' + (i+1) + ':\n'
+      + '商品名: ' + (c.product_name||'') + '\n'
+      + 'ブランド: ' + (c.brand||'') + '\n'
+      + '価格: ' + (c.price||'') + '\n'
+      + '主要訴求: ' + (c.main_claim||'') + '\n'
+      + '成分: ' + (c.ingredients||[]).join('、') + '\n'
+      + '内容量: ' + (c.quantity||'') + '\n'
+      + 'コピースタイル: ' + (c.copy_style||'') + '\n'
+      + 'サムネイル: ' + (c.thumbnail_style||'') + '\n'
+      + '弱点: ' + (c.weakness||'');
+  });
+
+  // Save to localStorage with research context
+  var exportData = {
+    keyword: window._researchResult.keyword,
+    category_trend: window._researchResult.category_trend,
+    thumbnail_trends: window._researchResult.thumbnail_trends,
+    copy_patterns: window._researchResult.copy_patterns,
+    insights: window._researchResult.insights,
+    selected_competitors: selected,
+    competitor_summaries: compSummaries,
+    exported_at: new Date().toISOString()
+  };
+  localStorage.setItem('amznplan_research_export', JSON.stringify(exportData));
+
+  // Show success and redirect
+  alert('✓ ' + selectedComps.length + '件の競合データをプランナーに読み込みました！\n\n構成プランナーに移動します。');
+  window.location.href = 'index.html';
+});
+
+// Enter key for search
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('searchBtn').click();
+});
+
+})();
+</script>
+</body>
+</html>
